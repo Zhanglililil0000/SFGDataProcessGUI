@@ -73,8 +73,8 @@ class MainWindow(QMainWindow):
     def select_file(self, file_type):
         """文件选择对话框"""
         file_path, _ = QFileDialog.getOpenFileName(
-            self, f"选择{file_type.replace('_', ' ')}文件", 
-            "", "CSV Files (*.csv);;All Files (*)"
+            self, f"Select {file_type.replace('_', ' ')} file", 
+            "", "Data Files (*.csv *.asc);;CSV Files (*.csv);;ASC Files (*.asc);;All Files (*)"
         )
         
         if file_path:
@@ -114,11 +114,21 @@ class MainWindow(QMainWindow):
                     first_line = f.readline()
                     second_line = f.readline()
                 
-                # 判断第一行是否是表头(包含非数字字符)
-                has_header = not all(c.isdigit() or c in '.-+eE \t\n' for c in first_line.split(',')[0])
-                
-                # 读取数据
-                df = pd.read_csv(file_path, header=0 if has_header else None)
+                # Check file extension and read accordingly
+                if file_path.lower().endswith('.csv'):
+                    # For CSV files, check if first line is header
+                    has_header = not all(c.isdigit() or c in '.-+eE \t\n' for c in first_line.split(',')[0])
+                    df = pd.read_csv(file_path, header=0 if has_header else None)
+                elif file_path.lower().endswith('.asc'):
+                    # For ASC files, try reading with space delimiter first
+                    try:
+                        df = pd.read_csv(file_path, delim_whitespace=True, header=None)
+                        # If only one column, try comma delimiter
+                        if len(df.columns) == 1:
+                            df = pd.read_csv(file_path, header=None)
+                    except:
+                        # Fallback to standard CSV reader if space delimiter fails
+                        df = pd.read_csv(file_path, header=None)
                 return df.iloc[:, 0].values, df.iloc[:, 1].values
                 
             # 读取并验证数据长度
